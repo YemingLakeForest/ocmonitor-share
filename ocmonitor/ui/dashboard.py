@@ -813,7 +813,7 @@ class DashboardUI:
     def create_compact_progress_bar(self, percentage: float, width: int = 20) -> str:
         """Create a compact progress bar for space-efficient display."""
         filled = int(width * percentage / 100)
-        bar = "▌" * filled + "░" * (width - filled)
+        bar = "█" * filled + "░" * (width - filled)
         return f"{bar} {percentage:.0f}%"
 
     def get_cost_color(self, percentage: float) -> str:
