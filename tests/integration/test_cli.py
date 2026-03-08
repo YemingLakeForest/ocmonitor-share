@@ -176,6 +176,19 @@ class TestSessionCommand:
         
         assert result.exit_code == 0
 
+    def test_session_no_valid_data_does_not_wrap_click_exit(self, tmp_path):
+        """Session with no valid data should not print wrapped Unexpected error."""
+        empty_dir = tmp_path / "empty_session_dir"
+        empty_dir.mkdir()
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["session", str(empty_dir)])
+
+        assert result.exit_code == 1
+        assert "No valid session data found in the specified directory." in result.output
+        assert "Error analyzing session:" not in result.output
+        assert "Unexpected error: 1" not in result.output
+
 
 class TestLiveCommand:
     """Tests for live command selection and precedence."""

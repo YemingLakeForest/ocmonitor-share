@@ -628,6 +628,160 @@ class LiveMonitor:
                 self._enable_raw_input_mode()
         return selected_id
 
+    def _execute_workflow_switch(
+        self,
+        new_id: Optional[str],
+        selected_session_id: Optional[str],
+        current_workflow_id: str,
+        current_workflow: SessionWorkflow,
+        active_workflows: List[SessionWorkflow],
+        live: Live,
+        descriptors: List[Dict[str, Any]],
+        interactive_switch: bool,
+        refresh_interval: int,
+    ) -> Tuple[str, SessionWorkflow, Optional[str]]:
+        """Execute workflow switch with state updates.
+
+        Args:
+            new_id: Target workflow ID to switch to
+            selected_session_id: Currently selected session ID (if any)
+            current_workflow_id: Current workflow ID
+            current_workflow: Current workflow object
+            active_workflows: List of available workflows
+            live: Rich Live instance for updates
+            descriptors: Workflow descriptors for display
+            interactive_switch: Whether keyboard controls enabled
+            refresh_interval: Update frequency in seconds
+
+        Returns:
+            Tuple of (updated_workflow_id, updated_workflow, updated_selected_session_id)
+        """
+        selected_session_id, switched = self._apply_switch_command_selection(
+            selected_session_id, current_workflow_id, new_id
+        )
+
+        if not switched or not selected_session_id:
+            return current_workflow_id, current_workflow, selected_session_id
+
+        self.prev_tracked = set()
+        self._live_status_line = f"Switched to workflow {selected_session_id}."
+        self.console.print(
+            f"[status.info]Switched to workflow [metric.value]{selected_session_id}[/metric.value][/status.info]"
+        )
+
+        immediate_current = self._resolve_selected_file_workflow(
+            active_workflows, selected_session_id
+        )
+
+        if not immediate_current:
+            return current_workflow_id, current_workflow, selected_session_id
+
+        if immediate_current.workflow_id != current_workflow_id:
+            current_workflow_id = immediate_current.workflow_id
+            self.prev_tracked = set()
+
+        current_workflow = immediate_current
+        self.prev_tracked |= set(s.session_id for s in current_workflow.all_sessions)
+
+        live.update(
+            self._generate_workflow_dashboard(
+                current_workflow, self._controls_hint(interactive_switch)
+            )
+        )
+
+        return current_workflow_id, current_workflow, selected_session_id
+
+    def _handle_list_command(
+        self,
+        live: Live,
+        descriptors: List[Dict[str, Any]],
+        selected_session_id: Optional[str],
+        current_workflow_id: str,
+        current_workflow: SessionWorkflow,
+        active_workflows: List[SessionWorkflow],
+        interactive_switch: bool,
+        refresh_interval: int,
+    ) -> Tuple[str, SessionWorkflow, Optional[str]]:
+        """Handle list/picker workflow switch command.
+
+        Args:
+            live: Rich Live instance
+            descriptors: Workflow descriptors for display
+            selected_session_id: Currently selected session ID
+            current_workflow_id: Current workflow ID
+            current_workflow: Current workflow object
+            active_workflows: List of available workflows
+            interactive_switch: Whether keyboard controls enabled
+            refresh_interval: Update frequency in seconds
+
+        Returns:
+            Tuple of (updated_workflow_id, updated_workflow, updated_selected_session_id)
+        """
+        selected_from_picker = self._pick_workflow_during_live(
+            live, descriptors, "Live Workflow Switcher", interactive_switch
+        )
+        if not selected_from_picker:
+            return current_workflow_id, current_workflow, selected_session_id
+
+        return self._execute_workflow_switch(
+            selected_from_picker,
+            selected_session_id,
+            current_workflow_id,
+            current_workflow,
+            active_workflows,
+            live,
+            descriptors,
+            interactive_switch,
+            refresh_interval,
+        )
+
+    def _handle_navigation_command(
+        self,
+        command: str,
+        descriptors: List[Dict[str, Any]],
+        selected_session_id: Optional[str],
+        current_workflow_id: str,
+        current_workflow: SessionWorkflow,
+        active_workflows: List[SessionWorkflow],
+        live: Live,
+        interactive_switch: bool,
+        refresh_interval: int,
+    ) -> Tuple[bool, str, SessionWorkflow, Optional[str]]:
+        """Handle n/p/1-9 navigation commands.
+
+        Args:
+            command: The command string (n, p, 1-9, etc)
+            descriptors: Workflow descriptors
+            selected_session_id: Currently selected session ID
+            current_workflow_id: Current workflow ID
+            current_workflow: Current workflow object
+            active_workflows: List of available workflows
+            live: Rich Live instance
+            interactive_switch: Whether keyboard controls enabled
+            refresh_interval: Update frequency in seconds
+
+        Returns:
+            Tuple of (should_quit, updated_workflow_id, updated_workflow, updated_selected_session_id)
+        """
+        new_id, should_quit = self._handle_live_switch_command(
+            command, descriptors, current_workflow_id
+        )
+        if should_quit:
+            return True, current_workflow_id, current_workflow, selected_session_id
+
+        new_workflow_id, new_workflow, new_selected = self._execute_workflow_switch(
+            new_id,
+            selected_session_id,
+            current_workflow_id,
+            current_workflow,
+            active_workflows,
+            live,
+            descriptors,
+            interactive_switch,
+            refresh_interval,
+        )
+        return False, new_workflow_id, new_workflow, new_selected
+
     def start_monitoring(
         self,
         base_path: str,
@@ -718,102 +872,44 @@ class LiveMonitor:
                     if interactive_switch:
                         command = self._poll_live_switch_command()
                         if command:
+                            prev_workflow_id = current_workflow_id
                             if command in {"l", "list", "s", "show"}:
-                                selected_from_picker = self._pick_workflow_during_live(
+                                (
+                                    current_workflow_id,
+                                    current_workflow,
+                                    selected_session_id,
+                                ) = self._handle_list_command(
                                     live,
                                     descriptors,
-                                    "Live Workflow Switcher",
+                                    selected_session_id,
+                                    current_workflow_id,
+                                    current_workflow,
+                                    active_workflows,
                                     interactive_switch,
+                                    refresh_interval,
                                 )
-                                if selected_from_picker:
-                                    selected_session_id, switched = self._apply_switch_command_selection(
-                                        selected_session_id,
-                                        current_workflow_id,
-                                        selected_from_picker,
-                                    )
-                                    if switched and selected_session_id:
-                                        self.prev_tracked = set()
-                                        self._live_status_line = (
-                                            f"Switched to workflow {selected_session_id}."
-                                        )
-                                        self.console.print(
-                                            f"[status.info]Switched to workflow [metric.value]{selected_session_id}[/metric.value][/status.info]"
-                                        )
-                                        immediate_current = self._resolve_selected_file_workflow(
-                                            active_workflows, selected_session_id
-                                        )
-                                        if immediate_current:
-                                            if (
-                                                immediate_current.workflow_id
-                                                != current_workflow_id
-                                            ):
-                                                current_workflow_id = (
-                                                    immediate_current.workflow_id
-                                                )
-                                                self.prev_tracked = set()
-                                            current_workflow = immediate_current
-                                            self.prev_tracked |= set(
-                                                s.session_id
-                                                for s in current_workflow.all_sessions
-                                            )
-                                            live.update(
-                                                self._generate_workflow_dashboard(
-                                                    current_workflow,
-                                                    self._controls_hint(interactive_switch),
-                                                )
-                                            )
-                                            next_refresh_at = (
-                                                time.time() + refresh_interval
-                                            )
+                                if current_workflow_id != prev_workflow_id:
+                                    next_refresh_at = time.time() + refresh_interval
                                 continue
 
-                            new_id, should_quit = self._handle_live_switch_command(
-                                command, descriptors, current_workflow_id
+                            should_quit, current_workflow_id, current_workflow, selected_session_id = self._handle_navigation_command(
+                                command,
+                                descriptors,
+                                selected_session_id,
+                                current_workflow_id,
+                                current_workflow,
+                                active_workflows,
+                                live,
+                                interactive_switch,
+                                refresh_interval,
                             )
+                            if current_workflow_id != prev_workflow_id:
+                                next_refresh_at = time.time() + refresh_interval
                             if should_quit:
                                 self.console.print(
                                     "\n[status.warning]Live monitoring stopped.[/status.warning]"
                                 )
                                 break
-                            selected_session_id, switched = self._apply_switch_command_selection(
-                                selected_session_id,
-                                current_workflow_id,
-                                new_id,
-                            )
-                            if switched and selected_session_id:
-                                self.prev_tracked = set()
-                                self._live_status_line = (
-                                    f"Switched to workflow {selected_session_id}."
-                                )
-                                self.console.print(
-                                    f"[status.info]Switched to workflow [metric.value]{selected_session_id}[/metric.value][/status.info]"
-                                )
-                                immediate_current = self._resolve_selected_file_workflow(
-                                    active_workflows, selected_session_id
-                                )
-                                if immediate_current:
-                                    if (
-                                        immediate_current.workflow_id
-                                        != current_workflow_id
-                                    ):
-                                        current_workflow_id = (
-                                            immediate_current.workflow_id
-                                        )
-                                        self.prev_tracked = set()
-                                    current_workflow = immediate_current
-                                    self.prev_tracked |= set(
-                                        s.session_id
-                                        for s in current_workflow.all_sessions
-                                    )
-                                    live.update(
-                                        self._generate_workflow_dashboard(
-                                            current_workflow,
-                                            self._controls_hint(interactive_switch),
-                                        )
-                                    )
-                                    next_refresh_at = (
-                                        time.time() + refresh_interval
-                                    )
 
                     if time.time() < next_refresh_at:
                         time.sleep(0.05)

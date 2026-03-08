@@ -1037,3 +1037,331 @@ class TestLiveMonitorToolStatsByModelSourceSelection:
 
             mock_load.assert_called_once()
             assert tool_stats == mock_stats
+
+
+class TestExecuteWorkflowSwitch:
+    """Tests for the _execute_workflow_switch refactored method."""
+
+    def test_execute_workflow_switch_no_switch_when_no_new_id(self, tmp_path):
+        """Should return unchanged state when new_id is None."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+        monitor.prev_tracked = set()
+
+        mock_workflow = MagicMock()
+        mock_workflow.workflow_id = "wf-1"
+        mock_workflow.all_sessions = [MagicMock(session_id="ses-1")]
+
+        result_id, result_workflow, result_selected = monitor._execute_workflow_switch(
+            new_id=None,
+            selected_session_id=None,
+            current_workflow_id="wf-1",
+            current_workflow=mock_workflow,
+            active_workflows=[mock_workflow],
+            live=MagicMock(),
+            descriptors=[],
+            interactive_switch=False,
+            refresh_interval=5,
+        )
+
+        assert result_id == "wf-1"
+        assert result_workflow == mock_workflow
+        assert result_selected is None
+        assert monitor.prev_tracked == set()
+
+    def test_execute_workflow_switch_no_switch_when_same_id(self, tmp_path):
+        """Should return unchanged state when new_id matches current."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+
+        mock_workflow = MagicMock()
+        mock_workflow.workflow_id = "wf-1"
+        mock_workflow.all_sessions = [MagicMock(session_id="ses-1")]
+
+        result_id, result_workflow, result_selected = monitor._execute_workflow_switch(
+            new_id="wf-1",
+            selected_session_id=None,
+            current_workflow_id="wf-1",
+            current_workflow=mock_workflow,
+            active_workflows=[mock_workflow],
+            live=MagicMock(),
+            descriptors=[],
+            interactive_switch=False,
+            refresh_interval=5,
+        )
+
+        assert result_id == "wf-1"
+        assert result_selected is None
+
+    def test_execute_workflow_switch_switches_to_new_workflow(self, tmp_path):
+        """Should update state and dashboard when switching to new workflow."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+        monitor.prev_tracked = {"old-session"}
+        monitor._generate_workflow_dashboard = MagicMock(return_value="mock_dashboard")
+
+        workflow_1 = MagicMock()
+        workflow_1.workflow_id = "wf-1"
+        workflow_1.all_sessions = [MagicMock(session_id="ses-1")]
+
+        workflow_2 = MagicMock()
+        workflow_2.workflow_id = "wf-2"
+        workflow_2.all_sessions = [
+            MagicMock(session_id="ses-2"),
+            MagicMock(session_id="ses-2b"),
+        ]
+
+        live_mock = MagicMock()
+
+        result_id, result_workflow, result_selected = monitor._execute_workflow_switch(
+            new_id="wf-2",
+            selected_session_id=None,
+            current_workflow_id="wf-1",
+            current_workflow=workflow_1,
+            active_workflows=[workflow_1, workflow_2],
+            live=live_mock,
+            descriptors=[],
+            interactive_switch=False,
+            refresh_interval=5,
+        )
+
+        assert result_id == "wf-2"
+        assert result_workflow == workflow_2
+        assert result_selected == "wf-2"
+        assert monitor.prev_tracked == {"ses-2", "ses-2b"}
+        assert monitor._live_status_line is not None
+        assert "Switched to workflow wf-2" in monitor._live_status_line
+        live_mock.update.assert_called_once()
+
+
+class TestHandleListCommand:
+    """Tests for the _handle_list_command refactored method."""
+
+    def test_handle_list_command_returns_unchanged_when_no_picker_selection(self, tmp_path):
+        """Should return unchanged state when picker returns None."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+        monitor._pick_workflow_during_live = MagicMock(return_value=None)
+
+        mock_workflow = MagicMock()
+        mock_workflow.workflow_id = "wf-1"
+
+        result_id, result_workflow, result_selected = monitor._handle_list_command(
+            live=MagicMock(),
+            descriptors=[{"workflow_id": "wf-1"}],
+            selected_session_id="wf-1",
+            current_workflow_id="wf-1",
+            current_workflow=mock_workflow,
+            active_workflows=[mock_workflow],
+            interactive_switch=True,
+            refresh_interval=5,
+        )
+
+        assert result_id == "wf-1"
+        assert result_workflow == mock_workflow
+        assert result_selected == "wf-1"
+
+    def test_handle_list_command_switches_when_picker_selects(self, tmp_path):
+        """Should switch workflow when picker returns a selection."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+
+        workflow_1 = MagicMock()
+        workflow_1.workflow_id = "wf-1"
+        workflow_1.all_sessions = [MagicMock(session_id="ses-1")]
+
+        workflow_2 = MagicMock()
+        workflow_2.workflow_id = "wf-2"
+        workflow_2.all_sessions = [MagicMock(session_id="ses-2")]
+
+        monitor._pick_workflow_during_live = MagicMock(return_value="wf-2")
+        monitor._resolve_selected_file_workflow = MagicMock(return_value=workflow_2)
+        monitor._generate_workflow_dashboard = MagicMock(return_value="mock_dashboard")
+
+        live_mock = MagicMock()
+
+        result_id, result_workflow, result_selected = monitor._handle_list_command(
+            live=live_mock,
+            descriptors=[{"workflow_id": "wf-1"}, {"workflow_id": "wf-2"}],
+            selected_session_id="wf-1",
+            current_workflow_id="wf-1",
+            current_workflow=workflow_1,
+            active_workflows=[workflow_1, workflow_2],
+            interactive_switch=True,
+            refresh_interval=5,
+        )
+
+        assert result_id == "wf-2"
+        assert result_workflow == workflow_2
+        assert result_selected == "wf-2"
+        monitor._pick_workflow_during_live.assert_called_once()
+
+
+class TestHandleNavigationCommand:
+    """Tests for the _handle_navigation_command refactored method."""
+
+    def test_handle_navigation_quit_command(self, tmp_path):
+        """Should return should_quit=True when quit command received."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+
+        mock_workflow = MagicMock()
+        mock_workflow.workflow_id = "wf-1"
+
+        should_quit, workflow_id, workflow, selected = monitor._handle_navigation_command(
+            command="q",
+            descriptors=[{"workflow_id": "wf-1"}],
+            selected_session_id="wf-1",
+            current_workflow_id="wf-1",
+            current_workflow=mock_workflow,
+            active_workflows=[mock_workflow],
+            live=MagicMock(),
+            interactive_switch=True,
+            refresh_interval=5,
+        )
+
+        assert should_quit is True
+        assert workflow_id == "wf-1"
+        assert workflow == mock_workflow
+        assert selected == "wf-1"
+
+    def test_handle_navigation_next_command_switches_workflow(self, tmp_path):
+        """Should switch to next workflow on 'n' command."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+
+        workflow_1 = MagicMock()
+        workflow_1.workflow_id = "wf-1"
+        workflow_1.all_sessions = [MagicMock(session_id="ses-1")]
+
+        workflow_2 = MagicMock()
+        workflow_2.workflow_id = "wf-2"
+        workflow_2.all_sessions = [MagicMock(session_id="ses-2")]
+
+        monitor._resolve_selected_file_workflow = MagicMock(return_value=workflow_2)
+        monitor._generate_workflow_dashboard = MagicMock(return_value="mock_dashboard")
+
+        live_mock = MagicMock()
+
+        should_quit, workflow_id, workflow, selected = monitor._handle_navigation_command(
+            command="n",
+            descriptors=[{"workflow_id": "wf-1"}, {"workflow_id": "wf-2"}],
+            selected_session_id=None,
+            current_workflow_id="wf-1",
+            current_workflow=workflow_1,
+            active_workflows=[workflow_1, workflow_2],
+            live=live_mock,
+            interactive_switch=True,
+            refresh_interval=5,
+        )
+
+        assert should_quit is False
+        assert workflow_id == "wf-2"
+        assert workflow == workflow_2
+        assert selected == "wf-2"
+        live_mock.update.assert_called_once()
+
+    def test_handle_navigation_prev_command_switches_workflow(self, tmp_path):
+        """Should switch to previous workflow on 'p' command."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+
+        workflow_1 = MagicMock()
+        workflow_1.workflow_id = "wf-1"
+        workflow_1.all_sessions = [MagicMock(session_id="ses-1")]
+
+        workflow_2 = MagicMock()
+        workflow_2.workflow_id = "wf-2"
+        workflow_2.all_sessions = [MagicMock(session_id="ses-2")]
+
+        monitor._resolve_selected_file_workflow = MagicMock(return_value=workflow_1)
+        monitor._generate_workflow_dashboard = MagicMock(return_value="mock_dashboard")
+
+        live_mock = MagicMock()
+
+        should_quit, workflow_id, workflow, selected = monitor._handle_navigation_command(
+            command="p",
+            descriptors=[{"workflow_id": "wf-1"}, {"workflow_id": "wf-2"}],
+            selected_session_id=None,
+            current_workflow_id="wf-2",
+            current_workflow=workflow_2,
+            active_workflows=[workflow_1, workflow_2],
+            live=live_mock,
+            interactive_switch=True,
+            refresh_interval=5,
+        )
+
+        assert should_quit is False
+        assert workflow_id == "wf-1"
+        assert workflow == workflow_1
+        assert selected == "wf-1"
+
+    def test_handle_navigation_number_command_jumps_to_workflow(self, tmp_path):
+        """Should jump to specific workflow on number command."""
+        from ocmonitor.services.live_monitor import LiveMonitor
+        from ocmonitor.config import PathsConfig
+
+        paths_config = PathsConfig(messages_dir=str(tmp_path))
+        monitor = LiveMonitor(pricing_data={}, paths_config=paths_config)
+
+        workflow_1 = MagicMock()
+        workflow_1.workflow_id = "wf-1"
+        workflow_1.all_sessions = [MagicMock(session_id="ses-1")]
+
+        workflow_2 = MagicMock()
+        workflow_2.workflow_id = "wf-2"
+        workflow_2.all_sessions = [MagicMock(session_id="ses-2")]
+
+        workflow_3 = MagicMock()
+        workflow_3.workflow_id = "wf-3"
+        workflow_3.all_sessions = [MagicMock(session_id="ses-3")]
+
+        monitor._resolve_selected_file_workflow = MagicMock(return_value=workflow_3)
+        monitor._generate_workflow_dashboard = MagicMock(return_value="mock_dashboard")
+
+        live_mock = MagicMock()
+
+        should_quit, workflow_id, workflow, selected = monitor._handle_navigation_command(
+            command="3",
+            descriptors=[
+                {"workflow_id": "wf-1"},
+                {"workflow_id": "wf-2"},
+                {"workflow_id": "wf-3"},
+            ],
+            selected_session_id=None,
+            current_workflow_id="wf-1",
+            current_workflow=workflow_1,
+            active_workflows=[workflow_1, workflow_2, workflow_3],
+            live=live_mock,
+            interactive_switch=True,
+            refresh_interval=5,
+        )
+
+        assert should_quit is False
+        assert workflow_id == "wf-3"
+        assert workflow == workflow_3
+        assert selected == "wf-3"
