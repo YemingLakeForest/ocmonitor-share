@@ -26,7 +26,12 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        "ocmonitor": ["*.toml", "*.json"],
+        "ocmonitor": [
+            "*.toml",
+            "*.json",
+            "web/frontend/build/**/*",
+            "web/frontend/build/*",
+        ],
     },
     install_requires=[
         "click>=8.0.0",
@@ -34,6 +39,7 @@ setup(
         "pydantic>=2.0.0",
         "toml>=0.10.0",
         "prometheus_client>=0.17.0",
+        "flask>=3.0.0",
     ],
     extras_require={
         "dev": [

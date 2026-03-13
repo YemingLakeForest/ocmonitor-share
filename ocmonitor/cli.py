@@ -999,6 +999,65 @@ def metrics(ctx, port, host):
 
 
 @cli.command()
+@click.option("--port", "-p", type=int, default=8080, help="Port to serve on (default: 8080)")
+@click.option("--host", type=str, default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
+@click.option("--debug", is_flag=True, help="Enable Flask debug mode")
+@click.option("--no-browser", is_flag=True, help="Don't auto-open browser")
+@click.pass_context
+def web(ctx: click.Context, port: int, host: str, debug: bool, no_browser: bool):
+    """Start the web dashboard UI.
+
+    Launches a local web server with a React Material UI dashboard
+    for visualizing session analytics, costs, and usage.
+
+    Examples:
+        ocmonitor web                    # Start on http://127.0.0.1:8080
+        ocmonitor web --port 3000        # Custom port
+        ocmonitor web --no-browser       # Don't auto-open browser
+    """
+    console = ctx.obj["console"]
+
+    try:
+        from .web.server import start_server
+    except ImportError as e:
+        click.echo(
+            "Flask is required for the web dashboard.\n"
+            "Install it with: pip install flask>=3.0.0",
+            err=True,
+        )
+        if ctx.obj.get("verbose"):
+            click.echo(f"Import error: {e}", err=True)
+        ctx.exit(1)
+        return
+
+    try:
+        pricing_data = ctx.obj["pricing_data"]
+        start_server(
+            pricing_data=pricing_data,
+            host=host,
+            port=port,
+            debug=debug,
+            no_browser=no_browser,
+            console=console,
+        )
+    except KeyboardInterrupt:
+        console.print("\n[bold yellow]Web server stopped.[/bold yellow]")
+    except OSError as e:
+        import errno
+        if e.errno == errno.EADDRINUSE:
+            click.echo(f"Port {port} is already in use. Try a different port with --port.", err=True)
+        else:
+            click.echo(f"Error starting web server: {e}", err=True)
+        ctx.exit(1)
+    except Exception as e:
+        error_msg = create_user_friendly_error(e)
+        click.echo(f"Error starting web server: {error_msg}", err=True)
+        if ctx.obj.get("verbose"):
+            click.echo(f"Details: {str(e)}", err=True)
+        ctx.exit(1)
+
+
+@cli.command()
 @click.pass_context
 def agents(ctx: click.Context):
     """List all detected agents and their types.

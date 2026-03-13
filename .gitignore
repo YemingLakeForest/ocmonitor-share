@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+!ocmonitor/web/frontend/build/
 develop-eggs/
 dist/
 downloads/
@@ -132,6 +133,13 @@ models.remote.json
 models_dev_api.json
 docs/
 grafana-testing/
+
+# Web UI frontend
+node_modules/
+!ocmonitor/web/frontend/build/
+!ocmonitor/web/frontend/package.json
+!ocmonitor/web/frontend/package-lock.json
+!ocmonitor/web/frontend/tsconfig.json
 
 # IDE
 .vscode/
