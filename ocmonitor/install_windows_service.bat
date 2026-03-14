@@ -26,7 +26,7 @@ if not exist "C:\Windows\nssm.exe" (
 
 REM Create service for ocmonitor web
 echo Creating 'OCMonitorWeb' service...
-C:\Windows\nssm.exe install OCMonitorWeb "%CD%\..\python.exe" "-m ocmonitor.cli web --port 9394 --no-browser"
+C:\Windows\nssm.exe install OCMonitorWeb "ocmonitor" "web --port 9394 --no-browser"
 C:\Windows\nssm.exe set OCMonitorWeb Description "OpenCode Monitor Web Dashboard"
 C:\Windows\nssm.exe set OCMonitorWeb AppDirectory "%CD%"
 C:\Windows\nssm.exe set OCMonitorWeb Start SERVICE_AUTO_START

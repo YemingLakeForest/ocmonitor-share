@@ -3,7 +3,7 @@ echo Starting OpenCode Monitor Web UI with ngrok tunnel...
 echo.
 
 REM Start ocmonitor web in background
-start /B cmd /c "cd /d %~dp0.. && python -m ocmonitor.cli web --port 9394 --no-browser"
+start /B cmd /c "ocmonitor web --port 9394 --no-browser"
 echo Waiting for web server to start...
 timeout /t 3 /nobreak > nul
 

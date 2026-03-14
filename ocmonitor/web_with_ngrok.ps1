@@ -3,8 +3,7 @@ Write-Host ""
 
 # Start ocmonitor web in background
 $webJob = Start-Job -ScriptBlock {
-    cd $using:PSScriptRoot\..
-    python -m ocmonitor.cli web --port 9394 --no-browser
+    ocmonitor web --port 9394 --no-browser
 }
 
 Write-Host "Waiting for web server to start..."

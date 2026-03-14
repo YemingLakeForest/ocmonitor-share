@@ -18,7 +18,7 @@ if "%choice%"=="5" exit
 
 :start
 echo Starting services...
-start /B cmd /c "cd /d %~dp0.. && python -m ocmonitor.cli web --port 9394 --no-browser"
+start /B cmd /c "ocmonitor web --port 9394 --no-browser"
 timeout /t 3 /nobreak > nul
 start /B cmd /c "ngrok http 9394"
 echo Services started!
