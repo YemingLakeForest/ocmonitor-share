@@ -11,8 +11,10 @@ cleanup() {
     echo ""
     echo "Stopping processes..."
     kill $WEB_PID 2>/dev/null
-    kill $NGROK_PID 2>/dev/null
-    rm -f "$WEB_OUTPUT"
+    [ -n "$NGROK_PID" ] && kill $NGROK_PID 2>/dev/null
+    [ -n "$TAIL_PID" ] && kill $TAIL_PID 2>/dev/null
+    [ -n "$NGROK_TAIL_PID" ] && kill $NGROK_TAIL_PID 2>/dev/null
+    rm -f "$WEB_OUTPUT" ngrok_output.log 2>/dev/null
     echo "Stopped."
     exit 0
 }
@@ -39,10 +41,20 @@ fi
 
 echo "Web server started successfully (PID: $WEB_PID)"
 
-# Start ngrok tunnel to port 9394
+# Start ngrok tunnel to port 9394 with proper terminal
 echo "Starting ngrok tunnel to http://localhost:9394..."
-ngrok http 9394 &
+echo "Note: If ngrok needs authentication, run: ngrok config add-authtoken YOUR_TOKEN"
+setsid ngrok http 9394 > ngrok_output.log 2>&1 &
 NGROK_PID=$!
+sleep 2
+
+# Check if ngrok is running
+if ! kill -0 $NGROK_PID 2>/dev/null; then
+    echo "Warning: Ngrok may have failed to start"
+    echo "Check ngrok_output.log for details"
+    echo "Continuing with web UI only..."
+    NGROK_PID=""
+fi
 
 echo ""
 echo "=============================================="
@@ -58,9 +70,20 @@ echo ""
 tail -f "$WEB_OUTPUT" &
 TAIL_PID=$!
 
-# Wait for ngrok process
-wait $NGROK_PID
+# Show ngrok output if available
+if [ -n "$NGROK_PID" ]; then
+    tail -f ngrok_output.log &
+    NGROK_TAIL_PID=$!
+    echo "Ngrok output being written to ngrok_output.log"
+    echo "Public URL will appear in that file"
+fi
 
-# Cleanup
-kill $TAIL_PID 2>/dev/null
-cleanup
+echo ""
+echo "To access web UI locally: http://localhost:9394"
+echo "To stop: Press Ctrl+C"
+echo ""
+
+# Wait for Ctrl+C
+while true; do
+    sleep 1
+done
