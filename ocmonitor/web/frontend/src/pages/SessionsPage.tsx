@@ -1,13 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box, Typography, Card, CardContent,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Chip, TextField, TablePagination,
+  TableSortLabel, Chip, TextField, TablePagination,
 } from '@mui/material';
 import { LoadingSpinner, ErrorAlert, EmptyState } from '../components/LoadingState';
 import { fetchSessions } from '../api';
-import { SessionsResponse } from '../types';
+import { SessionsResponse, SessionSummary } from '../types';
 import { formatCost, formatTokens, formatDateTime } from '../helpers';
+
+type SortKey = 'title' | 'project' | 'interactions' | 'tokens' | 'cost' | 'started';
+type SortDir = 'asc' | 'desc';
+
+function getSortValue(session: SessionSummary, key: SortKey): string | number {
+  switch (key) {
+    case 'title':        return (session.session_title || session.session_id).toLowerCase();
+    case 'project':      return session.project_name.toLowerCase();
+    case 'interactions': return session.interaction_count;
+    case 'tokens':       return session.total_tokens.total;
+    case 'cost':         return session.total_cost;
+    case 'started':      return session.start_time || '';
+    default:             return 0;
+  }
+}
 
 export default function SessionsPage() {
   const [data, setData] = useState<SessionsResponse | null>(null);
@@ -16,6 +31,8 @@ export default function SessionsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [sortKey, setSortKey] = useState<SortKey>('started');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   useEffect(() => {
     fetchSessions()
@@ -24,21 +41,56 @@ export default function SessionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorAlert message={error} />;
-  if (!data || data.sessions.length === 0) return <EmptyState />;
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'title' || key === 'project' ? 'asc' : 'desc');
+    }
+    setPage(0);
+  };
 
-  const filtered = data.sessions.filter((s) => {
+  const filtered = useMemo(() => {
+    if (!data) return [];
     const q = search.toLowerCase();
-    return (
+    return data.sessions.filter((s) =>
       (s.session_title || '').toLowerCase().includes(q) ||
       s.project_name.toLowerCase().includes(q) ||
       s.session_id.toLowerCase().includes(q) ||
       s.models_used.some((m) => m.toLowerCase().includes(q))
     );
-  });
+  }, [data, search]);
 
-  const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const va = getSortValue(a, sortKey);
+      const vb = getSortValue(b, sortKey);
+      let cmp = 0;
+      if (typeof va === 'number' && typeof vb === 'number') {
+        cmp = va - vb;
+      } else {
+        cmp = String(va).localeCompare(String(vb));
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortKey, sortDir]);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorAlert message={error} />;
+  if (!data || data.sessions.length === 0) return <EmptyState />;
+
+  const paged = sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  const columns: { key: SortKey; label: string; align?: 'right' }[] = [
+    { key: 'title', label: 'Title' },
+    { key: 'project', label: 'Project' },
+    { key: 'interactions', label: 'Interactions', align: 'right' },
+    { key: 'tokens', label: 'Tokens', align: 'right' },
+    { key: 'cost', label: 'Cost', align: 'right' },
+  ];
 
   return (
     <Box>
@@ -64,13 +116,27 @@ export default function SessionsPage() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Title</TableCell>
-                  <TableCell>Project</TableCell>
-                  <TableCell align="right">Interactions</TableCell>
-                  <TableCell align="right">Tokens</TableCell>
-                  <TableCell align="right">Cost</TableCell>
+                  {columns.map((col) => (
+                    <TableCell key={col.key} align={col.align} sortDirection={sortKey === col.key ? sortDir : false}>
+                      <TableSortLabel
+                        active={sortKey === col.key}
+                        direction={sortKey === col.key ? sortDir : 'asc'}
+                        onClick={() => handleSort(col.key)}
+                      >
+                        {col.label}
+                      </TableSortLabel>
+                    </TableCell>
+                  ))}
                   <TableCell>Models</TableCell>
-                  <TableCell>Started</TableCell>
+                  <TableCell sortDirection={sortKey === 'started' ? sortDir : false}>
+                    <TableSortLabel
+                      active={sortKey === 'started'}
+                      direction={sortKey === 'started' ? sortDir : 'asc'}
+                      onClick={() => handleSort('started')}
+                    >
+                      Started
+                    </TableSortLabel>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -121,7 +187,7 @@ export default function SessionsPage() {
           </TableContainer>
           <TablePagination
             component="div"
-            count={filtered.length}
+            count={sorted.length}
             page={page}
             onPageChange={(_, p) => setPage(p)}
             rowsPerPage={rowsPerPage}
