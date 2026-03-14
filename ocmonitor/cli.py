@@ -999,7 +999,7 @@ def metrics(ctx, port, host):
 
 
 @cli.command()
-@click.option("--port", "-p", type=int, default=8080, help="Port to serve on (default: 8080)")
+@click.option("--port", "-p", type=int, default=9394, help="Port to serve on (default: 9394)")
 @click.option("--host", type=str, default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
 @click.option("--debug", is_flag=True, help="Enable Flask debug mode")
 @click.option("--no-browser", is_flag=True, help="Don't auto-open browser")
@@ -1011,7 +1011,7 @@ def web(ctx: click.Context, port: int, host: str, debug: bool, no_browser: bool)
     for visualizing session analytics, costs, and usage.
 
     Examples:
-        ocmonitor web                    # Start on http://127.0.0.1:8080
+        ocmonitor web                    # Start on http://127.0.0.1:9394
         ocmonitor web --port 3000        # Custom port
         ocmonitor web --no-browser       # Don't auto-open browser
     """

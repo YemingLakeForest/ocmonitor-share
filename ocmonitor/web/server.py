@@ -64,7 +64,7 @@ def create_app(pricing_data: Dict[str, ModelPricing], console: Optional[Console]
 def start_server(
     pricing_data: Dict[str, ModelPricing],
     host: str = "127.0.0.1",
-    port: int = 8080,
+    port: int = 9394,
     debug: bool = False,
     no_browser: bool = False,
     console: Optional[Console] = None,
