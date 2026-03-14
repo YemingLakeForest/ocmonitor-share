@@ -100,16 +100,32 @@ chmod +x web_with_ngrok.sh
 
 For automatic startup on Windows:
 
-### 1. Install as Service
+### 1. Install as Service (Recommended)
+
+Run as Administrator:
+```bash
+setup_windows_startup.bat
+```
+
+This interactive script will:
+- Install NSSM (if not present)
+- Create Windows services for web UI and ngrok
+- Configure auto-start on boot
+- Create desktop shortcut for management
+- Create quick_start.bat for manual startup
+
+Services created:
+- **OCMonitorWeb**: Web dashboard on port 9394 (auto-start)
+- **OCMonitorNgrok**: Ngrok tunnel (depends on OCMonitorWeb, auto-start delayed)
+
+### Alternative: Basic Service Install
 
 Run as Administrator:
 ```bash
 install_windows_service.bat
 ```
 
-This creates two services:
-- **OCMonitorWeb**: Web dashboard on port 9394
-- **OCMonitorNgrok**: Ngrok tunnel (depends on OCMonitorWeb)
+This creates the same services without interactive setup.
 
 ### 2. Service Management
 
@@ -272,9 +288,12 @@ The build output is served from `frontend/build/`.
 - `web_with_ngrok.bat` - Windows batch script
 - `web_with_ngrok.ps1` - PowerShell script
 - `web_with_ngrok.sh` - Linux/macOS shell script
-- `install_windows_service.bat` - Windows service installer
+- `web_with_ngrok_simple.sh` - Simplified shell script
+- `setup_windows_startup.bat` - Windows service installer (recommended)
+- `install_windows_service.bat` - Basic Windows service installer
 - `install_linux_service.sh` - Linux/macOS service installer
 - `manage_service.bat` - Service manager
+- `quick_start.bat` - Manual startup script (created by setup)
 
 ## License
 
