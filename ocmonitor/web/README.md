@@ -100,32 +100,39 @@ chmod +x web_with_ngrok.sh
 
 For automatic startup on Windows:
 
-### 1. Install as Service (Recommended)
+### Windows Startup Options
 
-Run as Administrator:
+#### Option 1: Task Scheduler (Recommended - No NSSM)
+Uses built-in Windows Task Scheduler (cron equivalent):
+
 ```bash
+# Run as Administrator
+setup_windows_task.bat
+```
+
+Creates scheduled tasks:
+- **OCMonitorWeb**: Runs at system startup (as SYSTEM)
+- **OCMonitorNgrok**: Runs at user login (optional)
+
+#### Option 2: Windows Services (with NSSM)
+Uses NSSM to create proper Windows services:
+
+```bash
+# Run as Administrator  
 setup_windows_startup.bat
 ```
 
-This interactive script will:
-- Install NSSM (if not present)
-- Create Windows services for web UI and ngrok
-- Configure auto-start on boot
-- Create desktop shortcut for management
-- Create quick_start.bat for manual startup
+Creates Windows services:
+- **OCMonitorWeb**: Auto-start on boot
+- **OCMonitorNgrok**: Auto-start delayed (depends on web service)
 
-Services created:
-- **OCMonitorWeb**: Web dashboard on port 9394 (auto-start)
-- **OCMonitorNgrok**: Ngrok tunnel (depends on OCMonitorWeb, auto-start delayed)
+#### Option 3: Basic Service Install
+Simpler NSSM-based installer:
 
-### Alternative: Basic Service Install
-
-Run as Administrator:
 ```bash
+# Run as Administrator
 install_windows_service.bat
 ```
-
-This creates the same services without interactive setup.
 
 ### 2. Service Management
 
@@ -289,11 +296,14 @@ The build output is served from `frontend/build/`.
 - `web_with_ngrok.ps1` - PowerShell script
 - `web_with_ngrok.sh` - Linux/macOS shell script
 - `web_with_ngrok_simple.sh` - Simplified shell script
-- `setup_windows_startup.bat` - Windows service installer (recommended)
+- `setup_windows_task.bat` - Task Scheduler setup (recommended, no NSSM)
+- `setup_windows_startup.bat` - Windows service installer (with NSSM)
 - `install_windows_service.bat` - Basic Windows service installer
 - `install_linux_service.sh` - Linux/macOS service installer
 - `manage_service.bat` - Service manager
-- `quick_start.bat` - Manual startup script (created by setup)
+- `start_ocmonitor.bat` - Manual startup (created by setup)
+- `stop_ocmonitor.bat` - Stop services (created by setup)
+- `status_ocmonitor.bat` - Check status (created by setup)
 
 ## License
 
