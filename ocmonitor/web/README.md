@@ -71,6 +71,16 @@ web_with_ngrok.bat
 .\web_with_ngrok.ps1
 ```
 
+### Using Shell Script (Linux/macOS)
+
+```bash
+# Make executable
+chmod +x web_with_ngrok.sh
+
+# Run from ocmonitor/ directory
+./web_with_ngrok.sh
+```
+
 ### Manual Ngrok Setup
 
 1. Install ngrok: https://ngrok.com/download
@@ -84,7 +94,9 @@ web_with_ngrok.bat
    ```
 4. Use the public URL provided by ngrok
 
-## Windows Service (Auto-start)
+## Auto-start Services
+
+### Windows Service
 
 For automatic startup on Windows:
 
@@ -127,6 +139,22 @@ Options:
 - Stop Web UI + Ngrok  
 - Check status
 - View logs
+
+### Linux/macOS Service (systemd)
+
+For automatic startup on Linux/macOS with systemd:
+
+```bash
+# Make executable
+chmod +x install_linux_service.sh
+
+# Install services (run as root)
+sudo ./install_linux_service.sh
+```
+
+This creates two systemd services:
+- **ocmonitor-web**: Web dashboard on port 9394
+- **ocmonitor-ngrok**: Ngrok tunnel (depends on ocmonitor-web)
 
 ## API Endpoints
 
@@ -243,7 +271,9 @@ The build output is served from `frontend/build/`.
 - `frontend/` - React application
 - `web_with_ngrok.bat` - Windows batch script
 - `web_with_ngrok.ps1` - PowerShell script
-- `install_windows_service.bat` - Service installer
+- `web_with_ngrok.sh` - Linux/macOS shell script
+- `install_windows_service.bat` - Windows service installer
+- `install_linux_service.sh` - Linux/macOS service installer
 - `manage_service.bat` - Service manager
 
 ## License
