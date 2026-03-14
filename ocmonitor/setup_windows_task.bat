@@ -67,9 +67,14 @@ echo ==============================================
 echo Creating Scheduled Tasks
 echo ==============================================
 
+REM Delete existing tasks if they exist
+echo Removing existing tasks if any...
+schtasks /delete /tn "OCMonitorWeb" /f >nul 2>&1
+schtasks /delete /tn "OCMonitorNgrok" /f >nul 2>&1
+
 REM Create task for web UI (runs at system startup)
 echo Creating task: OCMonitorWeb (starts at system boot)...
-schtasks /create /tn "OCMonitorWeb" /tr "cmd /c \"cd /d \"%SCRIPT_DIR%\" && ocmonitor web --port 9394 --no-browser\"" /sc onstart /ru SYSTEM /rl HIGHEST /f
+schtasks /create /tn "OCMonitorWeb" /tr "cmd /c \"cd /d \"%SCRIPT_DIR%\" \&\& ocmonitor web --port 9394 --no-browser\"" /sc onstart /ru SYSTEM /rl HIGHEST /f
 if errorlevel 1 (
     echo ERROR: Failed to create OCMonitorWeb task
     pause
@@ -80,7 +85,7 @@ echo ✓ OCMonitorWeb task created (runs at system startup)
 if "%NGROK_AVAILABLE%"=="1" (
     echo.
     echo Creating task: OCMonitorNgrok (starts at user login)...
-    schtasks /create /tn "OCMonitorNgrok" /tr "cmd /c \"cd /d \"%SCRIPT_DIR%\" && ngrok http 9394\"" /sc onlogon /ru "%USERNAME%" /rl HIGHEST /f
+    schtasks /create /tn "OCMonitorNgrok" /tr "cmd /c \"cd /d \"%SCRIPT_DIR%\" \&\& ngrok http 9394\"" /sc onlogon /ru "%USERNAME%" /rl HIGHEST /f
     if errorlevel 1 (
         echo WARNING: Failed to create OCMonitorNgrok task
         echo Continuing without ngrok task...
