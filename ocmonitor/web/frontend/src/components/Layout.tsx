@@ -24,11 +24,13 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import FolderIcon from '@mui/icons-material/Folder';
 import MenuIcon from '@mui/icons-material/Menu';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import SensorsIcon from '@mui/icons-material/Sensors';
 
 const DRAWER_WIDTH = 240;
 
 const navItems = [
   { label: 'Overview', path: '/', icon: <DashboardIcon /> },
+  { label: 'Live', path: '/live', icon: <SensorsIcon /> },
   { label: 'Sessions', path: '/sessions', icon: <ListAltIcon /> },
   { label: 'Daily', path: '/daily', icon: <CalendarTodayIcon /> },
   { label: 'Weekly', path: '/weekly', icon: <DateRangeIcon /> },

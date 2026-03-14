@@ -11,6 +11,7 @@ from rich.console import Console
 from ..config import config_manager, ModelPricing
 from ..services.session_analyzer import SessionAnalyzer
 from ..services.report_generator import ReportGenerator
+from ..services.live_monitor import LiveMonitor
 from .api import api, init_api
 
 
@@ -39,9 +40,10 @@ def create_app(pricing_data: Dict[str, ModelPricing], console: Optional[Console]
 
     analyzer = SessionAnalyzer(pricing_data)
     report_generator = ReportGenerator(analyzer, console)
+    live_monitor = LiveMonitor(pricing_data, console, init_from_db=False)
 
     # Wire up API
-    init_api(analyzer, report_generator, pricing_data)
+    init_api(analyzer, report_generator, pricing_data, live_monitor)
     app.register_blueprint(api)
 
     # Serve React app for all non-API routes

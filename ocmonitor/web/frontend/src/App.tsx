@@ -11,6 +11,7 @@ import WeeklyPage from './pages/WeeklyPage';
 import MonthlyPage from './pages/MonthlyPage';
 import ModelsPage from './pages/ModelsPage';
 import ProjectsPage from './pages/ProjectsPage';
+import LivePage from './pages/LivePage';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<OverviewPage />} />
+            <Route path="/live" element={<LivePage />} />
             <Route path="/sessions" element={<SessionsPage />} />
             <Route path="/daily" element={<DailyPage />} />
             <Route path="/weekly" element={<WeeklyPage />} />

@@ -114,3 +114,83 @@ export interface ProjectsResponse {
   total_tokens: TokenUsage;
   projects: ProjectEntry[];
 }
+
+// ── Live Monitoring Types ────────────────────────────────────────────
+
+export interface LiveModelBreakdown {
+  model_id: string;
+  interactions: number;
+  tokens: TokenUsage;
+  cost: number;
+  p50_output_rate: number;
+  context_size: number;
+  context_window: number;
+  context_pct: number;
+}
+
+export interface LiveToolStat {
+  tool_name: string;
+  total_calls: number;
+  success_count: number;
+  failure_count: number;
+  success_rate: number;
+}
+
+export interface LiveRecentInteraction {
+  model_id: string;
+  tokens: TokenUsage;
+  cost: number;
+  duration_ms: number | null;
+  agent: string | null;
+  session_id?: string;
+}
+
+export interface LiveSession {
+  session_id: string;
+  session_title: string | null;
+  project_name: string;
+  agent: string | null;
+  is_sub_agent: boolean;
+  interaction_count: number;
+  tokens: TokenUsage;
+  cost: number;
+  quota: number;
+  quota_pct: number;
+  models_used: string[];
+  model_breakdown: LiveModelBreakdown[];
+  start_time: string | null;
+  end_time: string | null;
+  duration_ms: number;
+  duration_hours: number;
+  duration_pct: number;
+}
+
+export interface LiveWorkflow {
+  workflow_id: string;
+  display_title: string;
+  project_name: string;
+  session_count: number;
+  sub_agent_count: number;
+  has_sub_agents: boolean;
+  activity_status: 'active' | 'recent' | 'idle' | 'inactive';
+  last_activity_ago: number | null;
+  tokens: TokenUsage;
+  cost: number;
+  quota: number;
+  quota_pct: number;
+  start_time: string | null;
+  end_time: string | null;
+  duration_ms: number;
+  duration_hours: number;
+  duration_pct: number;
+  recent_interaction: LiveRecentInteraction | null;
+  model_breakdown: LiveModelBreakdown[];
+  tool_stats: LiveToolStat[];
+  sessions: LiveSession[];
+}
+
+export interface LiveResponse {
+  timestamp: string;
+  workflow_count: number;
+  workflows: LiveWorkflow[];
+}

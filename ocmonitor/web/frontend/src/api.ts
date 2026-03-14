@@ -7,6 +7,7 @@ import {
   MonthlyResponse,
   ModelsResponse,
   ProjectsResponse,
+  LiveResponse,
 } from './types';
 
 const API_BASE = '/api';
@@ -50,4 +51,8 @@ export async function fetchModels(): Promise<ModelsResponse> {
 
 export async function fetchProjects(): Promise<ProjectsResponse> {
   return fetchJson<ProjectsResponse>('/projects');
+}
+
+export async function fetchLive(): Promise<LiveResponse> {
+  return fetchJson<LiveResponse>('/live');
 }
