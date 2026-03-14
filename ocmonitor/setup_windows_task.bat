@@ -64,6 +64,27 @@ if errorlevel 1 (
 
 echo.
 echo ==============================================
+echo Creating Wrapper Scripts
+echo ==============================================
+
+echo Creating web_ui_wrapper.bat...
+(
+echo @echo off
+echo cd /d "%~dp0"
+echo ocmonitor web --port 9394 --no-browser
+) > "%SCRIPT_DIR%web_ui_wrapper.bat"
+
+if "%NGROK_AVAILABLE%"=="1" (
+    echo Creating ngrok_wrapper.bat...
+    (
+    echo @echo off
+    echo cd /d "%~dp0"
+    echo ngrok http 9394
+    ) > "%SCRIPT_DIR%ngrok_wrapper.bat"
+)
+
+echo.
+echo ==============================================
 echo Creating Scheduled Tasks
 echo ==============================================
 
@@ -74,7 +95,7 @@ schtasks /delete /tn "OCMonitorNgrok" /f >nul 2>&1
 
 REM Create task for web UI (runs at system startup)
 echo Creating task: OCMonitorWeb (starts at system boot)...
-schtasks /create /tn "OCMonitorWeb" /tr "cmd /c \"cd /d \"%SCRIPT_DIR%\" \&\& ocmonitor web --port 9394 --no-browser\"" /sc onstart /ru SYSTEM /rl HIGHEST /f
+schtasks /create /tn "OCMonitorWeb" /tr "\"%SCRIPT_DIR%web_ui_wrapper.bat\"" /sc onstart /ru SYSTEM /rl HIGHEST /f
 if errorlevel 1 (
     echo ERROR: Failed to create OCMonitorWeb task
     pause
@@ -85,7 +106,7 @@ echo ✓ OCMonitorWeb task created (runs at system startup)
 if "%NGROK_AVAILABLE%"=="1" (
     echo.
     echo Creating task: OCMonitorNgrok (starts at user login)...
-    schtasks /create /tn "OCMonitorNgrok" /tr "cmd /c \"cd /d \"%SCRIPT_DIR%\" \&\& ngrok http 9394\"" /sc onlogon /ru "%USERNAME%" /rl HIGHEST /f
+    schtasks /create /tn "OCMonitorNgrok" /tr "\"%SCRIPT_DIR%ngrok_wrapper.bat\"" /sc onlogon /ru "%USERNAME%" /rl HIGHEST /f
     if errorlevel 1 (
         echo WARNING: Failed to create OCMonitorNgrok task
         echo Continuing without ngrok task...
@@ -179,6 +200,12 @@ echo   ^> Starts web UI on port 9394
 if "%NGROK_AVAILABLE%"=="1" (
 echo - OCMonitorNgrok: Runs at user login (as %USERNAME%)
 echo   ^> Starts ngrok tunnel to port 9394
+)
+echo.
+echo Wrapper scripts created:
+echo - web_ui_wrapper.bat : Web UI launcher
+if "%NGROK_AVAILABLE%"=="1" (
+echo - ngrok_wrapper.bat  : Ngrok launcher
 )
 echo.
 echo Management scripts created:
