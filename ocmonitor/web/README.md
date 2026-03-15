@@ -11,6 +11,20 @@ A React Material UI web dashboard for visualizing OpenCode session analytics, co
 - **Time-based Reports**: Daily, weekly, and monthly usage breakdowns
 - **Public Access**: Expose via ngrok for remote access
 
+## Screenshots
+
+### Main Dashboard
+![Main Dashboard](web_dashboard_main.png)
+*Overview of OpenCode session analytics, costs, and usage metrics*
+
+### Sessions View
+![Sessions View](web_dashboard_sessions.png)
+*Detailed session breakdown with token usage and cost analysis*
+
+### Live Monitoring
+![Live Monitoring](web_dashboard_live.png)
+*Real-time dashboard for monitoring current OpenCode sessions*
+
 ## Installation
 
 ### 1. Install Dependencies
